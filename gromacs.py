@@ -11,7 +11,7 @@ def run_pdb2gmx(pdb_file):
            "-o", "processed.gro", "-water", "tip3p", "-ignh", "-ter")
 
     #user_inputs = ("1\n1\n1n\")#if you want to hardcode the interactive
-    #inputs, set a input flag in the subprocess call and set text = True
+    #inputs, set an input flag in the subprocess call and set text = True
     
     result = subprocess.run(cmd)
     if result.returncode != 0:

@@ -5,6 +5,22 @@ from pathlib import Path
 import subprocess
 import sys   
 
+#creating a function that allows stdout and stderr to be captured in log files
+logdir = Path("logs")
+logdir.mkdir(exist_ok = True) #safely creates logs directory if it doesn't already exist
+
+def run_command(cmd, step_name):
+    out_file = logdir/f"{step_name}.out"
+    err_file = logdir/f"{step_name}.err"
+    print (f"Logging to: {out_file}, {err_file}")
+    with open (out_file, "w") as out, open (err_file, "w") as err:
+        result = subprocess.run(cmd, stdout = out, stderr = err)
+    
+    if result.returncode != 0:
+        print ("ERROR")
+        sys.exit(1)
+    print(f"{step_name} completed successfully")
+
 def run_pdb2gmx(pdb_file):
     print("Generating coordinate file in GROMACS format")
     cmd = ("gmx", "pdb2gmx", "-f", pdb_file, "-p", "topol.top",
@@ -13,32 +29,22 @@ def run_pdb2gmx(pdb_file):
     #user_inputs = ("1\n1\n1n\")#if you want to hardcode the interactive
     #inputs, set an input flag in the subprocess call and set text = True
     
-    result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print ("ERROR")
-        sys.exit(1)
-    print("pdb2gmx completed successfully")
+    run_command(cmd, "pdb2gmx")
      
-
 def run_editconf():
     print("specifiying simulation box")
     cmd = ("gmx", "editconf", "-f", "processed.gro", "-d", "4",
            "-bt", "dodecahedron", "-o", "newbox.gro")
-    result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print ("ERROR")
-        sys.exit(1)
-    print("editconf completed successfully")
-
+    
+    run_command(cmd, "editconf")
+    
 def run_solvate():
     print("solvating the simulation box")
     cmd = ("gmx", "solvate", "-cp", "newbox.gro", "-cs", "spc216.gro",
             "-o", "solvate.gro", "-p", "topol.top")
     result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print ("ERROR")
-        sys.exit(1)
-    print("solvate completed successfully")
+
+    run_command(cmd, "solvate")
 
 #specifying different parameters in the function 
 #for grompp and mdrun for iterative handling
@@ -48,19 +54,15 @@ def run_grompp(mdp, gro, tpr):
     cmd = ("gmx", "grompp", "-f", mdp, "-c", "solvate.gro",
            "-p", "topol.top", "-o", tpr)
     result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print ("ERROR")
-        sys.exit(1)
-    print("grompp completed successfully")
+
+    run_command(cmd, "grompp")
 
 def run_mdrun(deffnm):
     print(f"starting {defnm} production")
     cmd = ("gmx", "mdrun", "-v", "-deffnm", deffnm)
     result = subprocess.run(cmd)
-    if result.returncode != 0:
-        print("ERROR")
-        sys.exit(1)
-    print("production run complete")
+
+    run_command(cmd, "mdrun")
 
 def main():
     pdb_files = list(Path('.').glob('*.pdb'))
